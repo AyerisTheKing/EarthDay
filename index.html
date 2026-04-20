@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌍 День Земли — каждый день!</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="magic-lights" id="magic-lights"></div>
+<div class="particles" id="particles"></div>
+
+<!-- 🔊 АУДИО-ФАЙЛЫ ДЛЯ 4 ЭТАПОВ -->
+<audio id="audio-stage1" preload="auto">
+  <source src="audio/stage1.mp3" type="audio/mpeg">
+  <source src="audio/stage1.wav" type="audio/wav">
+</audio>
+<audio id="audio-stage2" preload="auto">
+  <source src="audio/stage2.mp3" type="audio/mpeg">
+  <source src="audio/stage2.wav" type="audio/wav">
+</audio>
+<audio id="audio-stage3" preload="auto">
+  <source src="audio/stage3.mp3" type="audio/mpeg">
+  <source src="audio/stage3.wav" type="audio/wav">
+</audio>
+<audio id="audio-stage4" preload="auto">
+  <source src="audio/stage4.mp3" type="audio/mpeg">
+  <source src="audio/stage4.wav" type="audio/wav">
+</audio>
+<audio id="audio-stage5" preload="auto">
+  <source src="audio/stage5.mp3" type="audio/mpeg">
+  <source src="audio/stage5.wav" type="audio/wav">
+</audio>
+
+<div class="game-container">
+  
+  <!-- ===== ПЕРСОНАЖ-ЭМОДЗИ СПРАВА ===== -->
+  <div class="character-sidebar">
+    <div class="character-emoji-container" onclick="playStageHint()" title="Нажми, чтобы услышать подсказку">
+      <div class="emoji-glow"></div>
+      <div class="character-emoji" id="character-emoji">🦊</div>
+      <div class="speaking-indicator" id="speaking-indicator">🔊 Эко говорит...</div>
+    </div>
+    <div class="character-speak-hint">🔊 Нажми на меня!</div>
+  </div>
+
+  <!-- ===== ОСНОВНОЙ КОНТЕНТ ===== -->
+  <div class="main-content">
+    
+    <div class="screen active" id="screen-auth">
+      <div class="card">
+        <div class="earth-anim">🌍</div>
+        <div class="card-title">Вход в систему</div>
+        <div class="card-subtitle">Зарегистрируйся или войди, чтобы сохранить свои достижения!</div>
+        <div class="character-box">
+          <div class="character-box-avatar">🦊</div>
+          <div class="character-box-speech">
+            <div class="character-box-name">Эко — Хранитель Леса</div>
+            <div class="character-box-text">Привет! Я Эко. Давай познакомимся, чтобы мы не потеряли твой прогресс. Если у тебя еще нет аккаунта, просто введи данные и нажми "Регистрация"!</div>
+          </div>
+        </div>
+        <div class="auth-box" style="display: flex; flex-direction: column; gap: 16px; margin: 24px auto; max-width: 320px;">
+          <input type="text" id="auth-name" placeholder="Отображаемое имя" style="padding: 14px 20px; border-radius: 50px; border: 3px solid var(--card-border); font-size: 16px; font-family: 'Nunito', sans-serif; box-shadow: inset 0 2px 6px rgba(0,0,0,0.05); outline: none; transition: border-color 0.3s;" onfocus="this.style.borderColor='var(--forest-light)'" onblur="this.style.borderColor='var(--card-border)'">
+          <div style="display: flex; gap: 10px;">
+            <select id="auth-grade" style="flex: 1; padding: 14px 20px; border-radius: 50px; border: 3px solid var(--card-border); font-size: 16px; font-family: 'Nunito', sans-serif; box-shadow: inset 0 2px 6px rgba(0,0,0,0.05); outline: none; background: white; cursor: pointer; transition: border-color 0.3s;" onfocus="this.style.borderColor='var(--forest-light)'" onblur="this.style.borderColor='var(--card-border)'">
+              <option value="" disabled selected>Класс</option>
+              <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+              <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+              <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+              <option value="10">10</option><option value="11">11</option>
+            </select>
+            <select id="auth-letter" style="flex: 1; padding: 14px 20px; border-radius: 50px; border: 3px solid var(--card-border); font-size: 16px; font-family: 'Nunito', sans-serif; box-shadow: inset 0 2px 6px rgba(0,0,0,0.05); outline: none; background: white; cursor: pointer; transition: border-color 0.3s;" onfocus="this.style.borderColor='var(--forest-light)'" onblur="this.style.borderColor='var(--card-border)'">
+              <option value="" disabled selected>Буква</option>
+              <option value="А">А</option><option value="Б">Б</option><option value="В">В</option>
+              <option value="Г">Г</option><option value="Д">Д</option><option value="И">И</option>
+            </select>
+          </div>
+
+          <div id="auth-message" style="text-align: center; font-size: 14px; font-weight: 700; min-height: 20px; color: #c1121f;"></div>
+          <button class="btn btn-primary" onclick="authPlayer()" style="width: 100%;">🚀 Начать путешествие!</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-map">
+      <div class="card">
+        <div class="card-title">🗺️ Карта приключений</div>
+        <div class="score-display" id="score-display">⭐ 0 очков</div>
+        <div class="progress-container">
+          <div class="progress-bar" id="progress-bar" style="width: 0%">0%</div>
+        </div>
+        <div class="progress-stages">
+          <div class="stage-dot"><div class="stage-circle active" id="stage-1-circle">🧠</div><div class="stage-label">Тест</div></div>
+          <div class="stage-dot"><div class="stage-circle" id="stage-2-circle">🔗</div><div class="stage-label">Сопоставление</div></div>
+          <div class="stage-dot"><div class="stage-circle" id="stage-3-circle">🔍</div><div class="stage-label">Филворд</div></div>
+          <div class="stage-dot"><div class="stage-circle" id="stage-4-circle">🔤</div><div class="stage-label">Анаграммы</div></div>
+        </div>
+        <div class="character-box" id="map-character">
+          <div class="character-box-avatar">🦊</div>
+          <div class="character-box-speech">
+            <div class="character-box-name">Эко</div>
+            <div class="character-box-text" id="map-character-text"></div>
+          </div>
+        </div>
+        <div class="btn-center">
+          <button class="btn btn-primary" id="map-next-btn">🧠 Начать испытание 1</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-quiz">
+      <div class="card">
+        <div class="card-title">🧠 Испытание 1: Печать Жизни 🌱</div>
+        <div class="card-subtitle">Ответь на вопросы об экологии и Дне Земли</div>
+        <div class="score-display" id="quiz-score">⭐ 0 / 6</div>
+        <div id="quiz-content"></div>
+        <div class="btn-center" id="quiz-next-btn-container" style="display:none;">
+          <button class="btn btn-primary" onclick="nextQuizQuestion()">Следующий вопрос ➡️</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-matching">
+      <div class="card">
+        <div class="card-title">🔗 Испытание 2: Печать Воды 💧</div>
+        <div class="card-subtitle">Соедини экологический термин с его определением</div>
+        <div class="character-box">
+          <div class="character-box-avatar">🦊</div>
+          <div class="character-box-speech">
+            <div class="character-box-name">Эко</div>
+            <div class="character-box-text">Нажми на термин слева, затем на его определение справа. Каждая верная пара приближает тебя к победе!</div>
+          </div>
+        </div>
+        <div id="matching-content"></div>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-wordsearch">
+      <div class="card">
+        <div class="card-title">🔍 Испытание 3: Печать Воздуха 🌬️</div>
+        <div class="card-subtitle">Найди экологические слова в филворде</div>
+        <div class="character-box">
+          <div class="character-box-avatar">🦊</div>
+          <div class="character-box-speech">
+            <div class="character-box-name">Эко</div>
+            <div class="character-box-text">Слова прячутся среди букв! Нажимай на буквы в любом порядке. Когда выделишь всё слово, оно засветится!</div>
+          </div>
+        </div>
+        <div id="wordsearch-content"></div>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-anagrams">
+      <div class="card">
+        <div class="card-title">🔤 Испытание 4: Печать Огня 🔥</div>
+        <div class="card-subtitle">Собери слова из перемешанных букв</div>
+        <div class="character-box">
+          <div class="character-box-avatar">🦊</div>
+          <div class="character-box-speech">
+            <div class="character-box-name">Эко</div>
+            <div class="character-box-text">Буквы рассыпались — собери их в правильном порядке. Используй подсказки!</div>
+          </div>
+        </div>
+        <div id="anagram-content"></div>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-final">
+      <div class="card">
+        <div class="card-title">🏆 Приключение завершено!</div>
+        <div class="final-stars" id="final-stars"></div>
+        <div class="final-score" id="final-score">0 очков</div>
+        <div class="final-message" id="final-message"></div>
+        <div class="character-box">
+          <div class="character-box-avatar">🦊</div>
+          <div class="character-box-speech">
+            <div class="character-box-name">Эко — Хранитель Леса</div>
+            <div class="character-box-text" id="final-character-text"></div>
+          </div>
+        </div>
+        <div class="eco-fact">💡 <strong>Помни:</strong> День Земли — не только 22 апреля! Каждый день мы можем заботиться о планете. 🌍💚</div>
+        <div class="btn-center">
+          <button class="btn btn-sun" onclick="restartGame()">🔄 Пройти заново</button>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+<div class="confetti-container" id="confetti-container"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="script.js"></script>
+</body>
+</html>
