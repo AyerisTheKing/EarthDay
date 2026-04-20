@@ -1,4 +1,4 @@
-// v2.0
+// v2.3
 
 const SUPABASE_URL = "https://tdlhwokrmuyxsdleepht.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkbGh3b2tybXV5eHNkbGVlcGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDc3ODAsImV4cCI6MjA4NDk4Mzc4MH0.RlfUmejx2ywHNcFofZM4mNE8nIw6qxaTNzqxmf4N4-4";
@@ -12,6 +12,7 @@ let stageDurations = [0, 0, 0, 0];
 let totalScore = 0, currentStage = 1, stagesCompleted = [false, false, false, false];
 let anagramCurrent = [];
 let anagramWord = "";
+let leaderboardReturnTo = 'screen-auth';
 
 function playStageHint() {
   const indicator = document.getElementById('speaking-indicator');
@@ -142,7 +143,7 @@ async function authPlayer() {
   
   if (error) {
     if (error.message.includes('already registered')) {
-      msg.textContent = 'Это имя уже занято в твоем классе! Добавь к имени букву фамилии.';
+      msg.textContent = 'Это имя уже занято в твоем классе!';
     } else {
       msg.textContent = 'Ошибка: ' + error.message;
     }
@@ -152,6 +153,58 @@ async function authPlayer() {
   currentUser = data?.user;
   msg.textContent = '';
   startGame();
+}
+
+async function loadLeaderboard() {
+  const tbody = document.getElementById('leaderboard-tbody');
+  if (!tbody) return;
+  try {
+    const { data, error } = await supabaseClient.from('player_progress')
+      .select('display_name, grade, grade_letter, total_score, total_time_seconds')
+      .order('total_score', { ascending: false })
+      .order('total_time_seconds', { ascending: true })
+      .limit(10);
+      
+    if (error) throw error;
+    
+    if (!data || data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Пока нет рекордсменов!</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = '';
+    data.forEach((row, index) => {
+      const rank = index + 1;
+      let rankClass = '';
+      if (rank === 1) rankClass = 'rank-1';
+      else if (rank === 2) rankClass = 'rank-2';
+      else if (rank === 3) rankClass = 'rank-3';
+      
+      const tr = document.createElement('tr');
+      const timeStr = Math.floor(row.total_time_seconds / 60) + ':' + (row.total_time_seconds % 60).toString().padStart(2, '0');
+      tr.innerHTML = `
+        <td class="${rankClass}">${rank === 1 ? '🥇 ' : rank === 2 ? '🥈 ' : rank === 3 ? '🥉 ' : ''}${rank}</td>
+        <td>${row.display_name} (${row.grade}${row.grade_letter})</td>
+        <td>⭐ ${row.total_score}</td>
+        <td>⏱️ ${timeStr}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    console.error('Ошибка загрузки лидеров:', err);
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Ошибка загрузки</td></tr>';
+  }
+}
+
+function showLeaderboardScreen(returnId) {
+  leaderboardReturnTo = returnId || 'screen-auth';
+  showScreen('screen-leaderboard');
+  document.getElementById('leaderboard-tbody').innerHTML = '<tr><td colspan="4" style="text-align:center;">Загрузка данных...</td></tr>';
+  loadLeaderboard();
+}
+
+function hideLeaderboardScreen() {
+  showScreen(leaderboardReturnTo);
 }
 
 function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
@@ -442,4 +495,8 @@ function showFinalScreen() {
   if (stars >= 2) launchConfetti();
 }
 
-window.onload = function() { createMagicEffects(); createParticles(); checkSession(); };
+window.onload = function() { 
+  createMagicEffects(); 
+  createParticles(); 
+  checkSession(); 
+};

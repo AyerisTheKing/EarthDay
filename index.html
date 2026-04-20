@@ -79,6 +79,30 @@
 
           <div id="auth-message" style="text-align: center; font-size: 14px; font-weight: 700; min-height: 20px; color: #c1121f;"></div>
           <button class="btn btn-primary" onclick="authPlayer()" style="width: 100%;">🚀 Начать путешествие!</button>
+          <button class="btn btn-sun" onclick="showLeaderboardScreen('screen-auth')" style="width: 100%; margin-top: 5px;">🏆 Таблица лидеров</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ТАБЛИЦА ЛИДЕРОВ -->
+    <div class="screen" id="screen-leaderboard">
+      <div class="card" style="margin-top: 20px;">
+        <div class="leaderboard-title" style="font-size: 28px; margin-bottom: 24px;">🏆 Зал Славы (Топ-10)</div>
+        <table class="leaderboard-table">
+          <thead>
+            <tr>
+              <th>Место</th>
+              <th>Имя (Класс)</th>
+              <th>Очки</th>
+              <th>Время</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-tbody">
+            <tr><td colspan="4" style="text-align:center;">Загрузка данных...</td></tr>
+          </tbody>
+        </table>
+        <div class="btn-center">
+          <button class="btn btn-secondary" onclick="hideLeaderboardScreen()">⬅️ Назад</button>
         </div>
       </div>
     </div>
@@ -103,8 +127,9 @@
             <div class="character-box-text" id="map-character-text"></div>
           </div>
         </div>
-        <div class="btn-center">
+        <div class="btn-center" style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn btn-primary" id="map-next-btn">🧠 Начать испытание 1</button>
+          <button class="btn btn-sun" onclick="showLeaderboardScreen('screen-map')">🏆 Лидеры</button>
         </div>
       </div>
     </div>
