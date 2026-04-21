@@ -168,6 +168,7 @@ async function authPlayer() {
   document.getElementById('profile-me-btn').style.display = 'flex';
   msg.textContent = '';
   startGame();
+}
 let leaderboardData = [];
 
 async function loadLeaderboard() {
@@ -611,4 +612,4 @@ window.onload = function() {
   createMagicEffects(); 
   createParticles(); 
   checkSession(); 
-};}
+};
