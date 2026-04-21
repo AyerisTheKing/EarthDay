@@ -11,6 +11,9 @@
 <div class="magic-lights" id="magic-lights"></div>
 <div class="particles" id="particles"></div>
 
+<!-- Кнопка Мой Профиль -->
+<button class="profile-me-btn" id="profile-me-btn" style="display:none;" onclick="openMyProfile()">👤 Я</button>
+
 <!-- 🔊 АУДИО-ФАЙЛЫ ДЛЯ 4 ЭТАПОВ -->
 <audio id="audio-stage1" preload="auto">
   <source src="audio/stage1.mp3" type="audio/mpeg">
@@ -103,6 +106,23 @@
         </table>
         <div class="btn-center">
           <button class="btn btn-secondary" onclick="hideLeaderboardScreen()">⬅️ Назад</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ПРОФИЛЬ ИГРОКА -->
+    <div class="screen" id="screen-profile">
+      <div class="card" style="margin-top: 20px;">
+        <div class="card-title" id="profile-title">👤 Профиль игрока</div>
+        <div class="card-subtitle" id="profile-subtitle">Результаты прохождения этапов</div>
+        <div id="profile-content">
+          <div style="text-align:center;">Загрузка данных...</div>
+        </div>
+        <div id="profile-logout-container" class="btn-center" style="display:none;">
+          <button class="btn btn-danger" onclick="logoutPlayer()">🚪 Выйти из аккаунта</button>
+        </div>
+        <div class="btn-center">
+          <button class="btn btn-secondary" onclick="hideProfileScreen()">⬅️ Назад</button>
         </div>
       </div>
     </div>

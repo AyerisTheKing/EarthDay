@@ -1,4 +1,4 @@
-// v2.3
+// v2.5
 
 const SUPABASE_URL = "https://tdlhwokrmuyxsdleepht.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkbGh3b2tybXV5eHNkbGVlcGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDc3ODAsImV4cCI6MjA4NDk4Mzc4MH0.RlfUmejx2ywHNcFofZM4mNE8nIw6qxaTNzqxmf4N4-4";
@@ -103,6 +103,7 @@ async function checkSession() {
   const { data: { user }, error } = await supabaseClient.auth.getUser();
   if (user && !error) {
     currentUser = user;
+    document.getElementById('profile-me-btn').style.display = 'flex';
     startGame();
   } else {
     // Если аккаунта больше нет в БД — чистим кеш
@@ -123,9 +124,22 @@ async function authPlayer() {
   
   msg.textContent = 'Проверяем и регистрируем...';
   
-  const safeName = encodeURIComponent(nameInput).toLowerCase();
-  const safeLetter = encodeURIComponent(letter).toLowerCase();
-  const fakeEmail = `${safeName}_${grade}${safeLetter}@ecogame.local`;
+  const cyrillicToLatin = (text) => {
+    const ru = {
+      'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 
+      'е': 'e', 'ё': 'e', 'ж': 'zh', 'з': 'z', 'и': 'i', 
+      'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 
+      'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 
+      'у': 'u', 'ф': 'f', 'х': 'h', 'ц': 'c', 'ч': 'ch', 
+      'ш': 'sh', 'щ': 'sch', 'ъ': '', 'ы': 'y', 'ь': '', 
+      'э': 'e', 'ю': 'yu', 'я': 'ya'
+    };
+    return text.toLowerCase().split('').map(c => ru[c] || c).join('').replace(/[^a-z0-9]/g, '');
+  };
+
+  const safeName = cyrillicToLatin(nameInput);
+  const safeLetter = cyrillicToLatin(letter);
+  const fakeEmail = `${safeName}_${grade}${safeLetter}@ecoplayer.com`;
   const fakePassword = 'eco_password_123';
   
   // Строгая регистрация: если такой аккаунт уже есть, он выдаст ошибку
@@ -151,29 +165,32 @@ async function authPlayer() {
   }
   
   currentUser = data?.user;
+  document.getElementById('profile-me-btn').style.display = 'flex';
   msg.textContent = '';
   startGame();
-}
+let leaderboardData = [];
 
 async function loadLeaderboard() {
   const tbody = document.getElementById('leaderboard-tbody');
   if (!tbody) return;
   try {
     const { data, error } = await supabaseClient.from('player_progress')
-      .select('display_name, grade, grade_letter, total_score, total_time_seconds')
+      .select('display_name, grade, grade_letter, total_score, total_time_seconds, stage1_time, stage2_time, stage3_time, stage4_time')
       .order('total_score', { ascending: false })
       .order('total_time_seconds', { ascending: true })
       .limit(10);
       
     if (error) throw error;
     
-    if (!data || data.length === 0) {
+    leaderboardData = data || [];
+    
+    if (leaderboardData.length === 0) {
       tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Пока нет рекордсменов!</td></tr>';
       return;
     }
     
     tbody.innerHTML = '';
-    data.forEach((row, index) => {
+    leaderboardData.forEach((row, index) => {
       const rank = index + 1;
       let rankClass = '';
       if (rank === 1) rankClass = 'rank-1';
@@ -181,6 +198,9 @@ async function loadLeaderboard() {
       else if (rank === 3) rankClass = 'rank-3';
       
       const tr = document.createElement('tr');
+      tr.className = 'leaderboard-row';
+      tr.onclick = () => openPlayerProfile(index);
+      
       const timeStr = Math.floor(row.total_time_seconds / 60) + ':' + (row.total_time_seconds % 60).toString().padStart(2, '0');
       tr.innerHTML = `
         <td class="${rankClass}">${rank === 1 ? '🥇 ' : rank === 2 ? '🥈 ' : rank === 3 ? '🥉 ' : ''}${rank}</td>
@@ -194,6 +214,98 @@ async function loadLeaderboard() {
     console.error('Ошибка загрузки лидеров:', err);
     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Ошибка загрузки</td></tr>';
   }
+}
+
+// PROFILES & LEADERBOARD NAVIGATION
+
+let profileReturnTo = 'screen-map';
+
+function showProfileScreen(returnId) {
+  profileReturnTo = returnId || 'screen-map';
+  showScreen('screen-profile');
+}
+function hideProfileScreen() { showScreen(profileReturnTo); }
+
+function renderProfile(player) {
+  document.getElementById('profile-title').textContent = `👤 ${player.display_name} (${player.grade}${player.grade_letter})`;
+  
+  const t1 = player.stage1_time || 0; const t2 = player.stage2_time || 0;
+  const t3 = player.stage3_time || 0; const t4 = player.stage4_time || 0;
+  const total = player.total_time_seconds || 1; 
+
+  const p1 = Math.round((t1/total)*100) || 0; const p2 = Math.round((t2/total)*100) || 0;
+  const p3 = Math.round((t3/total)*100) || 0; const p4 = Math.round((t4/total)*100) || 0;
+  
+  const formatT = (sec) => Math.floor(sec/60) + ':' + (sec%60).toString().padStart(2, '0');
+
+  document.getElementById('profile-content').innerHTML = `
+    <div class="profile-stats">
+      <div class="profile-stat-box">⭐ Очки: ${player.total_score}</div>
+      <div class="profile-stat-box">⏱️ Общее время: ${formatT(total)}</div>
+    </div>
+    <div class="profile-stages">
+       <div class="profile-stage-line">
+          <div class="profile-stage-label">🌱 Этап 1</div>
+          <div class="profile-stage-bar-bg"><div class="profile-stage-bar" style="width:${p1}%"></div></div>
+          <div class="profile-stage-val">${formatT(t1)} (${p1}%)</div>
+       </div>
+       <div class="profile-stage-line">
+          <div class="profile-stage-label">💧 Этап 2</div>
+          <div class="profile-stage-bar-bg"><div class="profile-stage-bar" style="width:${p2}%"></div></div>
+          <div class="profile-stage-val">${formatT(t2)} (${p2}%)</div>
+       </div>
+       <div class="profile-stage-line">
+          <div class="profile-stage-label">🌬️ Этап 3</div>
+          <div class="profile-stage-bar-bg"><div class="profile-stage-bar" style="width:${p3}%"></div></div>
+          <div class="profile-stage-val">${formatT(t3)} (${p3}%)</div>
+       </div>
+       <div class="profile-stage-line">
+          <div class="profile-stage-label">🔥 Этап 4</div>
+          <div class="profile-stage-bar-bg"><div class="profile-stage-bar" style="width:${p4}%"></div></div>
+          <div class="profile-stage-val">${formatT(t4)} (${p4}%)</div>
+       </div>
+    </div>
+  `;
+}
+
+function openPlayerProfile(idx) {
+  const player = leaderboardData[idx];
+  if (!player) return;
+  document.getElementById('profile-logout-container').style.display = 'none';
+  renderProfile(player);
+  showProfileScreen('screen-leaderboard');
+}
+
+async function openMyProfile() {
+  if (!currentUser) return;
+  document.getElementById('profile-title').textContent = `👤 Мой профиль`;
+  document.getElementById('profile-content').innerHTML = '<div style="text-align:center;">Загрузка данных...</div>';
+  document.getElementById('profile-logout-container').style.display = 'flex'; 
+  
+  let currentScreen = 'screen-map';
+  document.querySelectorAll('.screen').forEach(s => { if(s.classList.contains('active')) currentScreen = s.id; });
+  showProfileScreen(currentScreen === 'screen-profile' ? profileReturnTo : currentScreen);
+
+  try {
+    const { data } = await supabaseClient.from('player_progress').select('*').eq('user_id', currentUser.id).order('total_score', { ascending: false }).limit(1);
+    if (data && data.length > 0) { renderProfile(data[0]); document.getElementById('profile-logout-container').style.display = 'flex'; }
+    else {
+      document.getElementById('profile-content').innerHTML = `
+        <div style="text-align:center; font-weight:700; color:var(--forest-dark); margin:20px 0;">
+          Вы еще не прошли игру до конца!<br><br>
+          Как только вы соберете все 4 печати, здесь появятся ваши достижения.
+        </div>
+      `;
+    }
+  } catch(err) { document.getElementById('profile-content').innerHTML = 'Ошибка загрузки профиля.'; }
+}
+
+async function logoutPlayer() {
+  if (!confirm('Вы уверены, что хотите выйти из аккаунта?')) return;
+  await supabaseClient.auth.signOut();
+  currentUser = null;
+  document.getElementById('profile-me-btn').style.display = 'none';
+  window.location.reload();
 }
 
 function showLeaderboardScreen(returnId) {
@@ -499,4 +611,4 @@ window.onload = function() {
   createMagicEffects(); 
   createParticles(); 
   checkSession(); 
-};
+};}
