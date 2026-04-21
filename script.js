@@ -1,4 +1,4 @@
-// v2.5
+// v2.7
 
 const SUPABASE_URL = "https://tdlhwokrmuyxsdleepht.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkbGh3b2tybXV5eHNkbGVlcGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDc3ODAsImV4cCI6MjA4NDk4Mzc4MH0.RlfUmejx2ywHNcFofZM4mNE8nIw6qxaTNzqxmf4N4-4";
@@ -239,6 +239,12 @@ function renderProfile(player) {
   
   const formatT = (sec) => Math.floor(sec/60) + ':' + (sec%60).toString().padStart(2, '0');
 
+  // Calculte stage points: Stage 2,3,4 always give max points since they are required to progress 
+  const s2 = 60;
+  const s3 = 70;
+  const s4 = 75;
+  const s1 = Math.max(0, player.total_score - (s2 + s3 + s4));
+
   document.getElementById('profile-content').innerHTML = `
     <div class="profile-stats">
       <div class="profile-stat-box">⭐ Очки: ${player.total_score}</div>
@@ -248,22 +254,22 @@ function renderProfile(player) {
        <div class="profile-stage-line">
           <div class="profile-stage-label">🌱 Этап 1</div>
           <div class="profile-stage-bar-bg"><div class="profile-stage-bar" style="width:${p1}%"></div></div>
-          <div class="profile-stage-val">${formatT(t1)} (${p1}%)</div>
+          <div class="profile-stage-val" style="min-width:105px;">${formatT(t1)} | ⭐ ${s1}</div>
        </div>
        <div class="profile-stage-line">
           <div class="profile-stage-label">💧 Этап 2</div>
           <div class="profile-stage-bar-bg"><div class="profile-stage-bar" style="width:${p2}%"></div></div>
-          <div class="profile-stage-val">${formatT(t2)} (${p2}%)</div>
+          <div class="profile-stage-val" style="min-width:105px;">${formatT(t2)} | ⭐ ${s2}</div>
        </div>
        <div class="profile-stage-line">
           <div class="profile-stage-label">🌬️ Этап 3</div>
           <div class="profile-stage-bar-bg"><div class="profile-stage-bar" style="width:${p3}%"></div></div>
-          <div class="profile-stage-val">${formatT(t3)} (${p3}%)</div>
+          <div class="profile-stage-val" style="min-width:105px;">${formatT(t3)} | ⭐ ${s3}</div>
        </div>
        <div class="profile-stage-line">
           <div class="profile-stage-label">🔥 Этап 4</div>
           <div class="profile-stage-bar-bg"><div class="profile-stage-bar" style="width:${p4}%"></div></div>
-          <div class="profile-stage-val">${formatT(t4)} (${p4}%)</div>
+          <div class="profile-stage-val" style="min-width:105px;">${formatT(t4)} | ⭐ ${s4}</div>
        </div>
     </div>
   `;
@@ -321,13 +327,43 @@ function hideLeaderboardScreen() {
 }
 
 function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-function startGame() { 
+
+async function startGame(forceFresh = false) { 
   totalScore = 0; currentStage = 1; stagesCompleted = [false, false, false, false]; 
   stageDurations = [0, 0, 0, 0];
+  window.currentSessionProgressId = null;
+
+  if (currentUser && !forceFresh) {
+    const { data } = await supabaseClient.from('player_progress')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(1);
+      
+    if (data && data.length > 0) {
+      const p = data[0];
+      window.currentSessionProgressId = p.id;
+      totalScore = p.total_score || 0;
+      stageDurations = [p.stage1_time||0, p.stage2_time||0, p.stage3_time||0, p.stage4_time||0];
+      
+      if (stageDurations[0] > 0) { stagesCompleted[0] = true; currentStage = 2; }
+      if (stageDurations[1] > 0) { stagesCompleted[1] = true; currentStage = 3; }
+      if (stageDurations[2] > 0) { stagesCompleted[2] = true; currentStage = 4; }
+      if (stageDurations[3] > 0) { stagesCompleted[3] = true; currentStage = 5; }
+
+      if (currentStage > 4) {
+        updateProgress();
+        showFinalScreen();
+        return;
+      }
+    }
+  }
+
   gameStartTime = Date.now();
   updateProgress(); showScreen('screen-map'); updateMapUI(); 
 }
-function restartGame() { startGame(); }
+
+function restartGame() { startGame(true); }
 
 function updateProgress() {
   const completedCount = stagesCompleted.filter(Boolean).length;
@@ -368,6 +404,9 @@ function completeStage(n) {
   stagesCompleted[n - 1] = true;
   currentStage = n + 1;
   updateProgress();
+  
+  saveProgress();
+
   if (currentStage > 4) showFinalScreen();
   else { showScreen('screen-map'); updateMapUI(); }
 }
@@ -577,25 +616,30 @@ function anagramHint() {
 async function saveProgress() {
   if (!currentUser) return;
   const meta = currentUser.user_metadata || {};
-  const totalTime = Math.floor((Date.now() - gameStartTime) / 1000);
-  await supabaseClient.from('player_progress').insert([
-    { 
-      user_id: currentUser.id, 
-      display_name: meta.display_name || 'Аноним',
-      grade: parseInt(meta.grade) || null,
-      grade_letter: meta.grade_letter || '',
-      total_score: totalScore, 
-      total_time_seconds: totalTime,
-      stage1_time: stageDurations[0],
-      stage2_time: stageDurations[1],
-      stage3_time: stageDurations[2],
-      stage4_time: stageDurations[3]
-    }
-  ]);
+  const totalTime = stageDurations[0] + stageDurations[1] + stageDurations[2] + stageDurations[3];
+  
+  const payload = { 
+    user_id: currentUser.id, 
+    display_name: meta.display_name || 'Аноним',
+    grade: parseInt(meta.grade) || null,
+    grade_letter: meta.grade_letter || '',
+    total_score: totalScore, 
+    total_time_seconds: totalTime,
+    stage1_time: stageDurations[0],
+    stage2_time: stageDurations[1],
+    stage3_time: stageDurations[2],
+    stage4_time: stageDurations[3]
+  };
+
+  if (window.currentSessionProgressId) {
+    await supabaseClient.from('player_progress').update(payload).eq('id', window.currentSessionProgressId);
+  } else {
+    const { data } = await supabaseClient.from('player_progress').insert([payload]).select('id');
+    if (data && data.length > 0) window.currentSessionProgressId = data[0].id;
+  }
 }
 
 function showFinalScreen() {
-  saveProgress();
   showScreen('screen-final'); document.getElementById('final-score').textContent = '⭐ ' + totalScore + ' очков';
   const maxScore = 60 + 60 + 70 + 75; const pct = totalScore / maxScore;
   let stars = 1, message = '', charText = '';
