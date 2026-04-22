@@ -1,4 +1,4 @@
-// v2.7
+// v3.3
 
 const SUPABASE_URL = "https://tdlhwokrmuyxsdleepht.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkbGh3b2tybXV5eHNkbGVlcGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MDc3ODAsImV4cCI6MjA4NDk4Mzc4MH0.RlfUmejx2ywHNcFofZM4mNE8nIw6qxaTNzqxmf4N4-4";
@@ -142,7 +142,19 @@ async function authPlayer() {
   const fakeEmail = `${safeName}_${grade}${safeLetter}@ecoplayer.com`;
   const fakePassword = 'eco_password_123';
   
-  // Строгая регистрация: если такой аккаунт уже есть, он выдаст ошибку
+  // Строгая регистрация: сначала проверяем, нет ли уже такого пользователя (пробуем войти)
+  const { data: signInData } = await supabaseClient.auth.signInWithPassword({
+    email: fakeEmail,
+    password: fakePassword
+  });
+  
+  if (signInData?.user) {
+    await supabaseClient.auth.signOut();
+    msg.textContent = 'Это имя уже занято в твоем классе!';
+    return;
+  }
+
+  // Если такого аккаунта нет, создаем
   const { data, error } = await supabaseClient.auth.signUp({
     email: fakeEmail,
     password: fakePassword,
@@ -156,7 +168,7 @@ async function authPlayer() {
   });
   
   if (error) {
-    if (error.message.includes('already registered')) {
+    if (error.status === 400 || error.status === 422 || error.message.toLowerCase().includes('already') || error.message.toLowerCase().includes('exists')) {
       msg.textContent = 'Это имя уже занято в твоем классе!';
     } else {
       msg.textContent = 'Ошибка: ' + error.message;
@@ -363,7 +375,7 @@ async function startGame(forceFresh = false) {
   updateProgress(); showScreen('screen-map'); updateMapUI(); 
 }
 
-function restartGame() { startGame(true); }
+
 
 function updateProgress() {
   const completedCount = stagesCompleted.filter(Boolean).length;
